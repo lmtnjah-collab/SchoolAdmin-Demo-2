@@ -1,0 +1,16 @@
+﻿/* Page-specific additions to the original responsive layouts in style.css. */
+@media (max-width: 640px) {
+  .site-header__inner { gap: 12px; flex-wrap: wrap; padding-block: 14px; }
+  .site-header__actions { gap: 10px; font-size: 12px; flex-wrap: wrap; }
+  .teachers-toolbar { align-items: stretch; flex-direction: column; }
+  .permission-row { align-items: stretch; flex-direction: column; }
+  .activity-form-card, dialog { padding: 20px; }
+  .login-card { margin-top: 0; }
+  .teachers-table { min-width: 570px; }
+  .teachers-table th, .teachers-table td { padding-inline: 14px; }
+  .teachers-table th:nth-child(1) { width: 34%; }
+  .teachers-table th:nth-child(2) { width: 30%; }
+  .teachers-table th:nth-child(3) { width: 36%; }
+}
+
+@media (max-width: 640px) { .mobile-table-hint { display: block; font-size: 12px; color: var(--text-secondary); } }

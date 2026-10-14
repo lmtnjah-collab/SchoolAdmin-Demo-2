@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>إضافة نشاط | إدارة المدرسة</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/responsive.css">
+  </head>
+  <body class="app-shell activity-page" data-page="activity">
+    <a class="skip-link" href="#main-content">تخطي إلى المحتوى الرئيسي</a>
+    <header class="site-header">
+      <div class="site-header__inner container">
+        <a class="brand" href="../index.html" id="home-link">
+          <span class="brand__mark" aria-hidden="true">و</span>
+          <span class="brand__text">
+            <span class="brand__title">إدارة المدرسة</span>
+            <span class="brand__subtitle">منصة وكيلة المدرسة</span>
+          </span>
+        </a>
+        <div class="site-header__actions" id="account-actions" hidden>
+          <span id="account-name">
+          </span>
+          <button id="logout-button" class="ui-button" type="button">تسجيل الخروج</button>
+        </div>
+      </div>
+    </header>
+    <main id="main-content" class="main-content" hidden>
+      <section class="container">
+        <nav id="teacher-navigation" class="teachers-toolbar" aria-label="أنشطتي" hidden>
+          <a class="ui-button" href="activity-details.html" id="teacher-add-link">إضافة نشاط</a>
+          <a class="ui-button" href="teacher-profile.html" id="teacher-activities-link">نشاطاتي</a>
+        </nav>
+        <div class="activity-form-shell">
+          <a class="profile-back-link" id="activity-back-link" href="teachers.html">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M19 12H5">
+              </path>
+              <path d="m11 18-6-6 6-6">
+              </path>
+            </svg>
+            <span>العودة إلى الأنشطة</span>
+          </a>
+          <div class="activity-form-card">
+            <header class="form-header">
+              <p class="eyebrow">ملف المعلمة</p>
+              <h1 id="activity-page-title">إضافة نشاط</h1>
+              <p id="activity-page-subtitle">إضافة نشاط جديد للمعلمة.</p>
+            </header>
+            <form id="activity-form" class="activity-form">
+              <div class="form-grid">
+                <div class="form-field">
+                  <label for="activity-title">اسم النشاط</label>
+                  <input id="activity-title" name="title" type="text" placeholder="اكتب اسم النشاط" required />
+                </div>
+                <div class="form-field">
+                  <label for="activity-type">نوع النشاط</label>
+                  <select id="activity-type" name="type" required>
+                    <option value="">اختر نوع النشاط</option>
+                    <option value="نشاط تعليمي">نشاط تعليمي</option>
+                    <option value="فعالية مدرسية">فعالية مدرسية</option>
+                    <option value="مبادرة">مبادرة</option>
+                    <option value="ورشة">ورشة</option>
+                    <option value="مسابقة">مسابقة</option>
+                  </select>
+                </div>
+                <div class="form-field form-field--full">
+                  <label for="activity-description">وصف النشاط</label>
+                  <textarea id="activity-description" name="description" placeholder="اكتب وصفًا مختصرًا للنشاط">
+                  </textarea>
+                </div>
+                <div class="form-field">
+                  <label for="activity-date">تاريخ النشاط</label>
+                  <input id="activity-date" name="date" type="date" required />
+                </div>
+                <div class="form-field">
+                  <label for="activity-attachment">إرفاق صورة أو PDF</label>
+                  <input id="activity-attachment" name="attachment" type="file" accept="image/png,image/jpeg,image/webp,.pdf" aria-describedby="attachment-help" />
+                  <p id="attachment-help" class="page-heading__description">حفظ محلي حتى 1 ميغابايت للمرفق؛ رفع الملفات إلى الخادم سيضاف لاحقًا.</p>
+                </div>
+                <div id="attachment-current" class="form-field--full">
+                </div>
+                <div class="form-field form-field--full">
+                  <label for="activity-notes">ملاحظات</label>
+                  <textarea id="activity-notes" name="notes" placeholder="ملاحظات إضافية إن وجدت">
+                  </textarea>
+                </div>
+              </div>
+              <p id="activity-form-status" class="form-status" aria-live="polite">
+              </p>
+              <div class="form-actions">
+                <div class="form-actions__right">
+                  <button id="delete-activity-button" type="button" class="secondary-button delete-button" hidden>حذف النشاط</button>
+                </div>
+                <div class="form-actions__right">
+                  <a id="cancel-activity-button" class="secondary-button" href="teachers.html">إلغاء</a>
+                  <button id="save-activity-button" type="submit" class="ui-button ui-button--primary">حفظ النشاط</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+    <p id="global-status" class="container form-status" role="alert">
+    </p>
+    <noscript>يرجى تفعيل JavaScript لاستخدام النظام.</noscript>
+    <script src="../js/data.js" defer>
+    </script>
+    <script src="../js/app.js" defer>
+    </script>
+    <script src="../js/teachers.js" defer>
+    </script>
+    <script src="../js/interactions.js" defer>
+    </script>
+  </body>
+</html>

@@ -1,0 +1,135 @@
+/* 1. Component variables / shared values */
+/* =========================================================
+   SchoolAdmin — Shared Components
+   Reserved for reusable components on inner pages.
+   The teachers page styling is handled by style.css.
+   ========================================================= */
+
+
+/* Shared card foundation for upcoming pages */
+
+.ui-card {
+    background: #ffffff;
+    border: 1px solid #e4e9e8;
+    border-radius: 20px;
+    box-shadow: 0 12px 36px rgba(19, 75, 79, 0.07);
+}
+
+
+/* Shared subtle button */
+
+.ui-button {
+    min-height: 42px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 8px 16px;
+
+    border: 1px solid #dde7e7;
+    border-radius: 12px;
+
+    background: #ffffff;
+    color: var(--primary);
+
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition:
+        background 220ms ease,
+        color 220ms ease,
+        border-color 220ms ease,
+        transform 220ms ease;
+}
+
+.ui-button:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #ffffff;
+
+    transform: translateY(-1px);
+}
+
+.ui-button--primary {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: #ffffff;
+    box-shadow: 0 10px 24px rgba(24, 106, 112, 0.18);
+}
+
+.ui-button--primary:hover,
+.ui-button--primary:focus-visible {
+    background: var(--primary-dark);
+    border-color: var(--primary-dark);
+    color: #ffffff;
+}
+
+
+/* Shared badge */
+
+.ui-badge {
+    display: inline-flex;
+    align-items: center;
+
+    min-height: 32px;
+
+    padding: 5px 13px;
+
+    border: 1px solid #ddebec;
+    border-radius: 999px;
+
+    background: #f0f9f9;
+    color: var(--primary);
+
+    font-size: 12px;
+    font-weight: 700;
+}
+
+
+/* Shared back link for inner pages */
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 6px;
+
+    color: var(--primary);
+
+    font-size: 13px;
+    font-weight: 700;
+
+    transition:
+        opacity 180ms ease,
+        transform 180ms ease;
+}
+
+.back-link:hover {
+    opacity: 0.8;
+    transform: translateX(2px);
+}
+/* Shared additions reuse the existing palette, cards, controls and spacing. */
+[hidden] { display: none !important; }
+:focus-visible { outline: 3px solid var(--mint); outline-offset: 4px; }
+button:disabled { opacity: .55; cursor: wait; }
+.login-card { max-width: 500px; margin: 20px auto; }
+.demo-note { margin-block: 24px; padding: 16px; border-radius: var(--radius-md); background: var(--primary-soft); color: var(--primary-dark); font-size: 14px; line-height: 1.8; }
+.demo-note summary { cursor: pointer; font-weight: 700; }
+.teachers-toolbar { gap: 16px; justify-content: space-between; align-items: center; }
+.row-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.permissions-list { display: grid; gap: 16px; }
+.permission-row { padding: 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.permission-row h2 { margin: 0; font-size: 18px; }
+.permission-row p { color: var(--text-secondary); margin-bottom: 0; }
+dialog { width: min(540px, calc(100% - 28px)); max-height: calc(100dvh - 40px); overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 28px; color: var(--text); box-shadow: var(--shadow-card); }
+dialog::backdrop { background: rgba(19, 75, 79, .4); }
+dialog h2 { margin: 0; }
+.activity-card, .permission-row, .teachers-table td { overflow-wrap: anywhere; }
+#attachment-current { display: flex; flex-wrap: wrap; gap: 12px; }
+#global-status { padding-block: 12px; }
+
+.mobile-table-hint { display: none; }
