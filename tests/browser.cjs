@@ -1,142 +1,88 @@
-﻿/* Browser regression tests; provide PLAYWRIGHT_MODULE if Playwright is not installed locally.
-   The HTTP server below only serves static files for this test and is not an application backend. */
-const {chromium}=require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+/* Dependency-free Chrome regression test. Temporary static server only; no app backend. */
 const fs=require('node:fs');
 const path=require('node:path');
 const os=require('node:os');
 const http=require('node:http');
+const {spawn}=require('node:child_process');
 const assert=require('node:assert/strict');
+const {once}=require('node:events');
 (async()=>{
  const root=path.resolve(__dirname,'..');
+ const prefix='/SchoolAdmin-Demo-2';
  const server=http.createServer((req,res)=>{
   const pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
-  const file=path.resolve(root,'.'+(pathname==='/'?'/index.html':pathname));
-  if(!file.startsWith(root+path.sep)) {res.writeHead(403).end();return;}
-  fs.readFile(file,(err,data)=>{if(err){res.writeHead(404).end();return;}res.setHeader('Content-Type',({'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'})[path.extname(file)]||'application/octet-stream');res.end(data);});
+  if(!pathname.startsWith(prefix+'/')) return res.writeHead(404).end();
+  const file=path.resolve(root,'.'+pathname.slice(prefix.length));
+  if(!file.startsWith(root+path.sep))return res.writeHead(403).end();
+  fs.readFile(file,(error,data)=>{if(error)return res.writeHead(404).end();res.setHeader('Content-Type',({'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'})[path.extname(file)]||'application/octet-stream');res.end(data);});
  });
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
- let browser;
+ const base=`http://127.0.0.1:${server.address().port}${prefix}`;
+ const profile=fs.mkdtempSync(path.join(os.tmpdir(),'schooladmin-test-'));
+ const chrome=process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+ const proc=spawn(chrome,['--headless=new','--no-first-run','--no-default-browser-check','--remote-debugging-port=0',`--user-data-dir=${profile}`,'about:blank'],{windowsHide:true,stdio:['ignore','ignore','pipe']});
+ let ws;
  try {
-  browser=await chromium.launch({headless:true,channel:'chrome'});
-  const context=await browser.newContext({viewport:{width:1440,height:1000}});
-  const page=await context.newPage();
-  const errors=[]; page.on('pageerror',e=>errors.push(e.message));
-  page.on('dialog',d=>d.accept());
-  const base=`http://127.0.0.1:${server.address().port}`;
-  const go=p=>page.goto(base+p);
-  const waitText=(id,text)=>page.waitForFunction(([id,text])=>document.getElementById(id)?.textContent.includes(text),[id,text]);
-  async function login(name,civil){await go('/index.html');await page.fill('#login-name',name);await page.fill('#login-civil',civil);await page.click('#login-form button');}
-  async function logout(){await page.click('#logout-button');await page.waitForURL('**/index.html');}
-  async function activity(title){await page.fill('#activity-title',title);await page.selectOption('#activity-type','مبادرة');await page.fill('#activity-date','2026-09-27');await page.click('#save-activity-button');}
-  await go('/pages/teachers.html');await page.waitForURL('**/index.html');
-  await login('admin','bad');await waitText('login-status','غير صحيحة');
-  await login('admin','1000000000');await page.waitForURL('**/admin-dashboard.html');
-  assert.equal(await page.locator('.profile-card').count(),2);
-  await page.screenshot({path:path.join(os.tmpdir(),'schooladmin-dashboard.png'),fullPage:true});
-  await page.click('a[href="teachers.html"]');await page.waitForSelector('#teachers-body tr');
-  assert.equal(await page.locator('#teachers-body tr').count(),3);
-  assert.ok(!(await page.locator('#teachers-body').innerText()).includes('1000000001'));
-  await page.fill('#teacher-search-input','الرياضيات');assert.equal(await page.locator('#teachers-body tr').count(),1);
-  await page.fill('#teacher-search-input','لا يوجد');assert.equal(await page.locator('#teachers-body tr').count(),0);
-  await page.fill('#teacher-search-input','');
-  await page.click('#add-teacher');
-  await page.fill('#person-name','معلمة اختبار');await page.fill('#person-job','علوم');await page.fill('#person-username','test');await page.fill('#person-civil','1234567890');await page.click('#person-form button[type=submit]');
-  await page.waitForFunction(()=>document.querySelectorAll('#teachers-body tr').length===4);
-  let row=page.locator('tr').filter({hasText:'معلمة اختبار'});
-  await row.locator('[data-edit]').click();await page.fill('#person-job','الفنون');await page.click('#person-form button[type=submit]');await waitText('teachers-body','الفنون');
-  await row.locator('[data-toggle]').click();await waitText('teachers-body','غير نشطة');
-  await row.locator('[data-toggle]').click();await page.waitForFunction(()=>!document.getElementById('teachers-body').textContent.includes('غير نشطة'));
-  await row.locator('a').click();await page.waitForURL('**/teacher-profile.html?teacher=*');
-  const teacherUrl=page.url(); const teacherId=new URL(teacherUrl).searchParams.get('teacher');
-  await page.click('#add-activity-button');await page.waitForSelector('#activity-form');
-  await page.setInputFiles('#activity-attachment',{name:'sample.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4\n%%EOF')});
-  await activity('نشاط إداري');await page.waitForURL('**/teacher-profile.html?teacher=*');await waitText('activities-list','نشاط إداري');
-  await page.reload();await waitText('activities-list','نشاط إداري');
-  await page.locator('.activity-card__content').click();await page.waitForSelector('#attachment-current a');
-  assert.equal(await page.locator('#activity-title').inputValue(),'نشاط إداري');
-  const activityUrl=page.url();
-  await page.fill('#activity-notes','ملاحظة محفوظة');await page.click('#save-activity-button');await page.waitForURL('**/teacher-profile.html?teacher=*');
-  await go('/pages/activity-details.html?teacher=hana-ali&activity='+new URL(activityUrl).searchParams.get('activity'));await waitText('activity-page-title','غير متاحة');assert.equal(await page.locator('#activity-form').isVisible(),false);
-  await go('/pages/teacher-profile.html?teacher=missing');await waitText('activities-title','غير موجودة');assert.equal(await page.locator('#add-activity-button').isVisible(),false);
-  await go('/pages/permissions.html');await page.waitForSelector('[data-user]');
-  let permission=page.locator('.permission-row').filter({hasText:'معلمة اختبار'});await permission.locator('button').click();await permission.getByText('سحب الصلاحية').waitFor();
-  await permission.locator('button').click();await permission.getByText('منح صلاحية إدارية').waitFor();
-  await page.click('#add-admin');await page.fill('#person-name','إدارية جديدة');await page.fill('#person-job','إدارة');await page.fill('#person-username','manager');await page.fill('#person-civil','1111111111');await page.click('#person-form button[type=submit]');await waitText('permissions-list','إدارية جديدة');
-  await logout();await login('manager','1111111111');await page.waitForURL('**/admin-dashboard.html');await logout();
-  await login('test','1234567890');await page.waitForURL('**/activity-details.html');
-  assert.equal(await page.locator('select').count(),1);
-  await go('/pages/activity-details.html?teacher=hana-ali');await waitText('activity-page-subtitle','معلمة اختبار');
-  await activity('نشاط المعلمة');await waitText('activity-form-status','بنجاح');
-  const own=await page.evaluate(()=>JSON.parse(localStorage.getItem('schoolAdminActivities')).find(a=>a.title==='نشاط المعلمة'));
-  assert.equal(own.teacherId,teacherId);
-  for(const p of ['/pages/admin-dashboard.html','/pages/teachers.html','/pages/permissions.html']) {
-   await go(p);await page.waitForURL(base+'/pages/activity-details.html');await page.waitForSelector('#activity-form');
+  const endpoint=await new Promise((resolve,reject)=>{let output='';const timer=setTimeout(()=>reject(new Error('Chrome startup timed out')),20000);proc.on('error',reject);proc.stderr.on('data',chunk=>{output+=chunk;const match=output.match(/DevTools listening on (ws:\/\/[^\s]+)/);if(match){clearTimeout(timer);resolve(match[1]);}});});
+  const port=new URL(endpoint).port;
+  const tabs=await (await fetch(`http://127.0.0.1:${port}/json`)).json();
+  ws=new WebSocket(tabs.find(t=>t.type==='page').webSocketDebuggerUrl);await once(ws,'open');
+  let seq=0;const pending=new Map();const errors=[];const badLinks=[];
+  ws.addEventListener('message',event=>{const msg=JSON.parse(event.data);if(msg.id){const p=pending.get(msg.id);pending.delete(msg.id);msg.error?p.reject(new Error(msg.error.message)):p.resolve(msg.result);}if(msg.method==='Runtime.exceptionThrown')errors.push(msg.params.exceptionDetails.text+': '+msg.params.exceptionDetails.exception?.description);if(msg.method==='Network.responseReceived'&&msg.params.response.status>=400&&msg.params.response.url.startsWith(base)&&!msg.params.response.url.endsWith('favicon.ico'))badLinks.push(msg.params.response.url);if(msg.method==='Page.javascriptDialogOpening')send('Page.handleJavaScriptDialog',{accept:true});});
+  function send(method,params={}){return new Promise((resolve,reject)=>{const id=++seq;const timer=setTimeout(()=>{pending.delete(id);reject(new Error('CDP timed out: '+method));},15000);pending.set(id,{resolve:value=>{clearTimeout(timer);resolve(value);},reject:error=>{clearTimeout(timer);reject(error);}});ws.send(JSON.stringify({id,method,params}));});}
+  await send('Runtime.enable');await send('Page.enable');await send('Network.enable');
+  async function js(expression){const r=await send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(r.exceptionDetails)throw new Error(r.exceptionDetails.exception?.description||r.exceptionDetails.text);return r.result.value;}
+  async function wait(expression){const end=Date.now()+10000;while(Date.now()<end){try{if(await js(expression))return;}catch{}await new Promise(r=>setTimeout(r,60));}throw new Error('Timed out: '+expression);}
+  async function go(p){await send('Page.navigate',{url:base+p});await wait(`location.href===${JSON.stringify(base+p)} && document.readyState==='complete'`);await wait(`document.querySelector('main:not([hidden])')`);}
+  async function click(selector){await js(`document.querySelector(${JSON.stringify(selector)}).click()`);}
+  async function fill(data){await js(`Object.entries(${JSON.stringify(data)}).forEach(([id,value])=>{document.getElementById(id).value=value;document.getElementById(id).dispatchEvent(new Event('input',{bubbles:true}));})`);}
+  async function login(name,civil,page){await go('/index.html');await fill({'login-name':name,'login-civil':civil});await click('#login-form button');await wait(`location.pathname.endsWith('/${page}.html') && document.querySelector('main:not([hidden])')`);}
+  async function logout(){await click('#logout-button');await wait(`location.pathname.endsWith('/index.html') && document.querySelector('main:not([hidden])')`);}
+  const teacherData={'field-name':'معلمة تجريبية','field-civilRegistration':'1000000001','field-employeeNumber':'DEMO-01','field-specialty':'الرياضيات','field-stage':'الابتدائية','field-subjects':'الرياضيات، العلوم','field-workload':'18'};
+  console.log('Browser ready; starting teacher flow.');
+  await login('noura','1000000001','teacher-info');
+  await click('#professional-form button[type=submit]');assert.ok(await js(`location.pathname.endsWith('teacher-info.html')`));
+  await fill(teacherData);await click('#professional-form button[type=submit]');await wait(`document.querySelectorAll('[data-category]').length===7`);
+  assert.equal(await js(`document.documentElement.dir`),'rtl');
+  const types=await js(`Array.from(document.querySelectorAll('[data-category]'),a=>a.dataset.category)`);
+  for(const type of types){ console.log('Checking '+type);
+   await click(`[data-category="${type}"]`);await wait(`document.querySelector('.empty-state__title')?.textContent.includes('لا توجد')`);
+   assert.ok(await js(`location.pathname.endsWith('teacher-records.html')`));
+   await click('.activities-heading a');await wait(`document.getElementById('professional-form')`);
+   await js(`document.querySelectorAll('#professional-form input, #professional-form textarea').forEach(el=>{el.value=el.type==='date'?'2026-10-17':'بيانات تجريبية '+el.name;})`);
+   await click('#professional-form button[type=submit]');await wait(`document.querySelector('.professional-table tbody tr')`);
+   assert.ok(await js(`document.getElementById('global-status').textContent.includes('تم حفظ البيانات بنجاح')`));
+   await send('Page.reload');await wait(`document.querySelector('.professional-table tbody tr')`);
+   await click('.row-actions a');await wait(`document.querySelector('#professional-form input:disabled')`);
+   assert.equal(await js(`document.querySelectorAll('#professional-form button[type=submit]').length`),0);
+   await click('.form-actions a');await wait(`document.querySelector('.row-actions')`);await click('.row-actions a:nth-child(2)');await wait(`document.querySelector('#professional-form input:not(:disabled)')`);
+   await fill({'field-notes':'ملاحظات معدلة'});await click('#professional-form button[type=submit]');await wait(`document.querySelector('.professional-table tbody tr')`);
+   await click('.professional-breadcrumb a');await wait(`document.querySelector('[data-category]')`);
+   assert.equal(await js(`document.querySelector('[data-category="${type}"] [data-count]').textContent`),'1');
   }
-  await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(os.tmpdir(),'schooladmin-mobile-activity.png'),fullPage:true});
-  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-  await logout();await page.screenshot({path:path.join(os.tmpdir(),'schooladmin-mobile-login.png'),fullPage:true});
-  await login('admin','1000000000');await page.waitForURL('**/admin-dashboard.html');
-  for(const p of ['/pages/admin-dashboard.html','/pages/teachers.html','/pages/permissions.html','/pages/teacher-profile.html?teacher='+teacherId]) {await go(p);await page.waitForSelector('main:not([hidden])');assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),p);}
-  await page.screenshot({path:path.join(os.tmpdir(),'schooladmin-mobile-profile.png'),fullPage:true});
-  await page.locator('[data-delete]').first().click();await page.waitForFunction(()=>document.querySelectorAll('.activity-card').length===1);
-  await go('/pages/teachers.html');await page.waitForSelector('#teachers-body tr');await page.screenshot({path:path.join(os.tmpdir(),'schooladmin-mobile-teachers.png'),fullPage:true});
-  await page.setViewportSize({width:1440,height:1000});await page.screenshot({path:path.join(os.tmpdir(),'schooladmin-teachers.png'),fullPage:true});
-  row=page.locator('tr').filter({hasText:'معلمة اختبار'});await row.locator('[data-toggle]').click();await waitText('teachers-body','غير نشطة');await logout();await login('test','1234567890');await waitText('login-status','غير نشط');
-  // Exact requested flows, using the original demo accounts and UI navigation.
-  await login('noura','1000000001');await page.waitForURL('**/activity-details.html');
-  await activity('نشاط نورة من حسابها');await waitText('activity-form-status','بنجاح');
-  await page.click('#teacher-activities-link');await page.waitForURL('**/teacher-profile.html');
-  await waitText('activities-list','نشاط نورة من حسابها');
-  assert.equal(await page.locator('.activity-card').count(),1);
-  assert.equal(await page.locator('[data-delete]').count(),0);
-  await page.locator('.activity-card__content').click();await page.waitForSelector('#activity-title:disabled');
-  assert.equal(await page.locator('#activity-title').inputValue(),'نشاط نورة من حسابها');
-  assert.equal(await page.locator('#delete-activity-button').isVisible(),false);
-  assert.equal(await page.locator('#save-activity-button').isVisible(),false);
-  await page.click('#activity-back-link');await waitText('activities-list','نشاط نورة من حسابها');
-  await logout();
-  console.log('TEST 1 PASS: noura login -> add -> success -> My Activities -> own read-only details.');
-
-  await login('admin','1000000000');await page.waitForURL('**/admin-dashboard.html');
-  await page.click('a[href="teachers.html"]');await page.getByRole('link',{name:'نورة محمد',exact:true}).click();
-  await page.waitForURL('**/teacher-profile.html?teacher=noura-mohammed');
-  await waitText('activities-list','نشاط نورة من حسابها');
-  assert.equal(await page.locator('#activity-form').count(),0);
-  assert.equal(await page.locator('#activities-title').innerText(),'نورة محمد');
-  assert.ok((await page.locator('#activities-subtitle').innerText()).includes('الرياضيات'));
-  await page.click('#add-activity-button');await page.waitForURL('**/activity-details.html?teacher=noura-mohammed');
-  await activity('نشاط نورة من الإدارة');await page.waitForURL('**/teacher-profile.html?teacher=noura-mohammed');
-  await waitText('activities-list','نشاط نورة من الإدارة');
-  assert.equal(await page.locator('.activity-card').count(),2);
-  assert.equal(await page.evaluate(()=>sessionStorage.getItem('schoolAdminSession.v1')),'vice-principal');
-  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('schoolAdminActivities')).find(a=>a.title==='نشاط نورة من الإدارة').teacherId),'noura-mohammed');
-  console.log('TEST 2 PASS: admin -> teachers -> Noura list -> explicit add -> Noura list; admin session unchanged.');
-
-  await page.click('#activities-back-link');await page.getByRole('link',{name:'هناء علي',exact:true}).click();
-  await page.waitForURL('**/teacher-profile.html?teacher=hana-ali');await page.waitForSelector('#activities-empty-state:not([hidden])');
-  assert.equal(await page.locator('.activity-card').count(),0);
-  await page.click('#add-activity-button');await activity('نشاط هناء فقط');await page.waitForURL('**/teacher-profile.html?teacher=hana-ali');
-  await waitText('activities-list','نشاط هناء فقط');assert.equal(await page.locator('.activity-card').count(),1);
-  assert.ok(!(await page.locator('#activities-list').innerText()).includes('نورة'));
-  const hanaDetail=await page.locator('.activity-card__content').getAttribute('href');
-  await logout();
-  console.log('TEST 3 PASS: another teacher shows only her own activities, with no Noura activities.');
-
-  await login('noura','1000000001');await page.waitForURL('**/activity-details.html');
-  await go('/pages/teacher-profile.html?teacher=hana-ali');await waitText('activities-list','نشاط نورة من الإدارة');
-  assert.equal(await page.locator('.activity-card').count(),2);
-  assert.ok(!(await page.locator('#activities-list').innerText()).includes('نشاط هناء فقط'));
-  await page.goto(hanaDetail);await waitText('activity-page-title','غير متاحة');
-  assert.equal(await page.locator('#activity-form').isVisible(),false);
-  await page.click('#activity-back-link');await waitText('activities-list','نشاط نورة من حسابها');
-  await page.setViewportSize({width:390,height:844});
-  assert.ok(await page.locator('#teacher-activities-link').isVisible());
-  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-  await page.screenshot({path:path.join(os.tmpdir(),'schooladmin-my-activities-mobile.png'),fullPage:true});
-  await page.click('#teacher-add-link');await page.waitForURL('**/activity-details.html');
-  assert.ok(await page.locator('#activity-title').isEnabled());
-  assert.deepEqual(errors,[]);
-  console.log('PASS: login/redirects, teacher CRUD, permissions, activity ownership, attachments, deletion, persistence, direct URL guards, desktop/mobile overflow, zero runtime errors.');
-  console.log('Screenshots: '+os.tmpdir()+'\\schooladmin-*.png');
- } finally {if(browser)await browser.close();await new Promise(r=>server.close(r));}
+  await go('/pages/teacher-info.html');assert.equal(await js(`document.getElementById('field-name').value`),'معلمة تجريبية');
+  await fill({'field-name':'معلمة تجريبية معدلة'});await click('#professional-form button[type=submit]');await wait(`document.getElementById('teacher-welcome')?.textContent.includes('معدلة')`);
+  assert.deepEqual(await js(`Array.from(document.querySelectorAll('[data-count]'),n=>n.textContent)`),Array(7).fill('1'));
+  for(const width of [1440,768,390]) {
+   await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:false});
+   for(const p of ['/pages/teacher-dashboard.html','/pages/teacher-info.html','/pages/teacher-records.html?type=attended-courses','/pages/teacher-record-form.html?type=attended-courses']){
+    await go(p);assert.ok(await js(`document.documentElement.scrollWidth<=innerWidth`),`${width}: ${p}`);
+    if(p.includes('dashboard')){const screenshot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:true});fs.writeFileSync(path.join(os.tmpdir(),`schooladmin-teacher-${width}.png`),Buffer.from(screenshot.data,'base64'));}
+   }
+  }
+  await go('/pages/teacher-records.html?type=attended-courses');await click('[data-delete]');await wait(`document.querySelector('.empty-state__title')`);
+  await go('/pages/teacher-dashboard.html');assert.equal(await js(`document.querySelector('[data-category="attended-courses"] [data-count]').textContent`),'0');
+  await logout();await login('noura','1000000001','teacher-dashboard');await logout();
+  await login('hana','1000000002','teacher-info');await fill({...teacherData,'field-name':'معلمة ثانية','field-civilRegistration':'1000000002'});await click('#professional-form button[type=submit]');await wait(`document.querySelector('[data-count]')`);
+  assert.deepEqual(await js(`Array.from(document.querySelectorAll('[data-count]'),n=>n.textContent)`),Array(7).fill('0'));
+  await go('/pages/teacher-record-form.html?type=unknown');assert.ok(await js(`document.body.textContent.includes('الفئة غير موجودة')`));
+  await logout();await login('admin','1000000000','admin-dashboard');
+  for(const p of ['/pages/admin-dashboard.html','/pages/teachers.html','/pages/permissions.html','/pages/teacher-profile.html?teacher=noura-mohammed','/pages/activity-details.html?teacher=noura-mohammed'])await go(p);
+  await fill({'activity-title':'نشاط إداري تجريبي','activity-type':'مبادرة','activity-date':'2026-10-17'});await click('#save-activity-button');await wait(`document.querySelector('.activity-card')`);
+  await click('.activity-card__content');await wait(`document.getElementById('activity-title')?.value==='نشاط إداري تجريبي'`);
+  await fill({'activity-notes':'تعديل الإدارة'});await click('#save-activity-button');await wait(`document.querySelector('.activity-card')`);await click('[data-delete]');await wait(`document.getElementById('activities-empty-state')?.hidden===false`);
+  assert.deepEqual(errors,[]);assert.deepEqual(badLinks,[]);
+  console.log('PASS: first/repeat login, profile validation/edit, all seven category add/view/edit/list/count flows, deletion, refresh persistence, separate teacher accounts, RTL, desktop/tablet/mobile overflow, GitHub Pages subpath, admin pages and activity CRUD, zero JavaScript errors or broken requests.');
+  console.log('Screenshots: '+path.join(os.tmpdir(),'schooladmin-teacher-{1440,768,390}.png'));
+ }finally{if(ws)ws.close();proc.kill();server.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

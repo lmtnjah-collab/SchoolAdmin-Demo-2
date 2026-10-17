@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>سجلات الفئة | إدارة المدرسة</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/responsive.css">
+  </head>
+  <body class="app-shell activity-page" data-page="teacher-records">
+    <a class="skip-link" href="#main-content">تخطي إلى المحتوى الرئيسي</a>
+    <header class="site-header">
+      <div class="site-header__inner container">
+        <a class="brand" href="../index.html" id="home-link">
+          <span class="brand__mark" aria-hidden="true">و</span>
+          <span class="brand__text">
+            <span class="brand__title">إدارة المدرسة</span>
+            <span class="brand__subtitle">منصة وكيلة المدرسة</span>
+          </span>
+        </a>
+        <div class="site-header__actions" id="account-actions" hidden>
+          <span id="account-name">
+          </span>
+          <button id="logout-button" class="ui-button" type="button">تسجيل الخروج</button>
+        </div>
+      </div>
+    </header>
+    <main id="main-content" class="main-content" hidden>
+      <section class="container">
+        <nav class="professional-breadcrumb" aria-label="مسار التنقل"><a href="teacher-dashboard.html">السجل المهني</a><span id="breadcrumb-current"></span></nav>
+        <div id="professional-content"></div>
+      </section>
+    </main>
+    <p id="global-status" class="container form-status" role="alert"></p>
+    <noscript>يرجى تفعيل JavaScript لاستخدام النظام.</noscript>
+    <script src="../js/data.js" defer></script>
+    <script src="../js/teacher-professional.js" defer></script>
+    <script src="../js/app.js" defer></script>
+  </body>
+</html>

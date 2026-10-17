@@ -1,4 +1,4 @@
-﻿# SchoolAdmin — frontend prototype
+# SchoolAdmin — frontend prototype
 
 Arabic / RTL static frontend, preserving the original Tajawal font, teal palette,
 responsive teacher table, cards and activity form. Open `index.html` through a
@@ -19,25 +19,56 @@ Frontend route/service checks demonstrate intended behavior, not real authorizat
 
 ## Pages and responsibilities
 
-- `index.html`: login; admins go to the dashboard and teachers directly to the activity form.
+- `index.html`: login; admins keep their dashboard. Teachers without a completed profile go to `teacher-info.html`; returning teachers go to `teacher-dashboard.html`.
 - `pages/admin-dashboard.html`: exactly two sections, teachers and permissions.
 - `pages/teachers.html`: dynamic search, add/edit modal, deactivate/reactivate.
   Deactivation preserves activity history and prevents login/new activities.
 - `pages/teacher-profile.html?teacher=ID`: selected teacher activities for admins.
-  Teachers use the same page through «نشاطاتي», scoped to their session ID.
+  The legacy teacher activity view remains available, separate from professional records.
 - `pages/activity-details.html`: original activity form, reused for create/details/edit.
   Admin creation needs `?teacher=ID`; details also need `&activity=ID`.
   Teachers always create for the current session ID, regardless of URL parameters.
-  «إضافة نشاط» remains their login destination; «نشاطاتي» opens their saved activities
-  and read-only details. Teacher edit/delete and administrative access remain blocked.
+  Legacy activities remain intact and are no longer the teacher login destination.
 - `pages/permissions.html`: grant/revoke admin access for active teachers or create
   another authorized administrator. Revoking a non-teaching admin deactivates that
   account; permissions can be granted again. Self-revocation/deactivation is blocked.
 
+## Teacher professional record flow
+
+- `pages/teacher-info.html`: required fictional profile data; prefilled for editing. Editing this profile does not change demo login credentials or professional records.
+- `pages/teacher-dashboard.html`: welcome, compact profile, and exactly seven category cards with saved record counts.
+- `pages/teacher-records.html?type=TYPE`: category-specific list, empty state, add/view/edit/delete actions.
+- `pages/teacher-record-form.html?type=TYPE`: category-specific fields, required-field validation, read-only details with `&id=ID&mode=view`, editing with `&id=ID`.
+- `js/teacher-professional.js`: shared category definitions, teacher storage and page behavior. Existing form/card/table styles are reused; small responsive additions live in `css/components.css`.
+
+Supported types: peer-visits, workshops, principal-visits, vice-principal-visits,
+guided-reading, presented-courses, attended-courses. All start empty. Notes and
+recommendations are optional; other record fields are required. Subjects use a
+comma-separated text field. Workload is an integer from 0 to 60.
+
+localStorage uses separate maps keyed by stable session teacher ID:
+
+```js
+teacherProfile = {
+  "noura-mohammed": { teacherId, name, civilRegistration, employeeNumber,
+    specialty, stage, subjects, workload, updatedAt }
+};
+teacherRecords = {
+  "noura-mohammed": { peerVisits: [], workshops: [], principalVisits: [],
+    vicePrincipalVisits: [], guidedReading: [], presentedCourses: [], attendedCourses: [] }
+};
+// Each record includes its category fields, id, teacherId, createdAt, updatedAt.
+```
+
+No professional records are migrated from legacy activities because their fields
+and categories differ. The admin display of professional records is deferred.
+All app links work under a GitHub Pages repository subpath. The existing optional
+Google Fonts links are retained. No build step or application dependencies are needed.
+
 ## Frontend data boundary
 
 `js/data.js` is the asynchronous repository, session and prototype policy layer.
-UI files never access storage directly. `js/app.js` handles shared startup/guards;
+The legacy UI uses that repository; professional pages encapsulate their separate localStorage in `js/teacher-professional.js`. `js/app.js` handles shared startup/guards;
 `js/teachers.js` handles teacher/permission screens; `js/interactions.js` handles activities.
 
 Users are seeded once into `schoolAdminUsers.v1`; additions and edits persist.
@@ -61,12 +92,11 @@ sessions, and provide file upload/storage. None of those server protections exis
 
 - `node --test tests/data.test.cjs`: repository roles, ownership, user lifecycle,
   duplicate credentials, permissions, persistence, legacy data and corrupt storage.
-- `node tests/browser.cjs`: Chrome UI regression tests and desktop/mobile screenshots.
-  Requires externally available Playwright (`PLAYWRIGHT_MODULE` can point to its
-  module directory) and installed Chrome; no app dependency was added. The test
-  starts a temporary static file server, uses an isolated browser context, and closes
-  both afterward. It does not modify the user's normal browser data.
+- `node tests/browser.cjs`: dependency-free browser regression using installed Chrome and a temporary static server. Override `CHROME_PATH` for another Chrome installation. Tests run in a separate temporary browser profile under a GitHub Pages style subpath.
 
-Browser tests cover login/redirects, direct URL guards, teacher CRUD/deactivation,
-permission changes, activity creation/edit/delete, ownership mismatch, attachments,
-reload persistence, Arabic RTL pages and mobile overflow at 390px.
+Browser tests cover first and repeat teacher login, required profile validation,
+profile editing, all seven category add/view/edit/list/count flows, delete,
+refresh persistence, account separation, Arabic RTL, desktop/tablet/mobile
+overflow, admin pages and legacy activity CRUD, failed local requests and
+JavaScript exceptions. Dashboard screenshots are written to the OS temporary
+folder as `schooladmin-teacher-{1440,768,390}.png`.
