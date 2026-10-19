@@ -13,24 +13,34 @@ window.SchoolActivities = (() => {
       document.querySelector('.activities-heading .eyebrow').textContent = 'نشاطاتي';
     }
     let teacher;
-    try { teacher = await SchoolData.getTeacher(teacherId); }
+    let professional;
+    try {
+      if(isAdmin) professional = await SchoolProfessional.renderAdminProfile(el('admin-professional-profile'),teacherId);
+      teacher = professional?.teacher || await SchoolData.getTeacher(teacherId);
+    }
     catch (error) {
       el('activities-title').textContent = 'المعلمة غير موجودة';
       el('activities-subtitle').textContent = error.message;
       el('add-activity-button').hidden = true;
       return;
     }
-    el('activities-title').textContent = teacher.name;
-    el('activities-subtitle').textContent = `${teacher.job} · ${teacher.active ? 'أنشطة المعلمة' : 'حساب غير نشط — الأنشطة محفوظة للعرض'}`;
-    el('add-activity-button').hidden = !teacher.active;
+    el('activities-title').textContent = professional?.profile.name || teacher.name;
+    el('activities-subtitle').textContent = isAdmin ? 'السجل المهني للمعلمة — للعرض فقط' : `${teacher.job} · ${teacher.active ? 'أنشطة المعلمة' : 'حساب غير نشط — الأنشطة محفوظة للعرض'}`;
+    el('add-activity-button').hidden = isAdmin || !teacher.active;
+    if(isAdmin) {
+      document.querySelector('.activities-count').hidden=true;
+      document.querySelector('.activities-toolbar').hidden=true;
+      document.title=`ملف المعلمة — ${professional.profile.name || teacher.name} | إدارة المدرسة`;
+    }
     document.querySelectorAll('#add-activity-button, #activities-empty-state a').forEach(link => {
       link.href = SchoolApp.url('pages/activity-details.html', isAdmin ? { teacher: teacher.id } : {});
-      link.hidden = !teacher.active;
+      link.hidden = isAdmin || !teacher.active;
     });
     async function render() {
       const activities = await SchoolData.listActivities(teacher.id);
       el('activities-count-number').textContent = activities.length;
-      el('activities-empty-state').hidden = activities.length > 0;
+      el('activities-empty-state').hidden = isAdmin || activities.length > 0;
+      el('legacy-activities-title').hidden = !isAdmin || !activities.length;
       el('activities-list').innerHTML = activities.slice().reverse().map(a => `<article class="activity-card"><div class="activity-card__top"><span class="activity-card__category">${esc(a.type || 'غير محدد')}</span>${isAdmin ? `<button class="secondary-button delete-button" data-delete="${esc(a.id)}" aria-label="حذف ${esc(a.title)}">حذف</button>` : ''}</div><a class="activity-card__content" href="${esc(SchoolApp.url('pages/activity-details.html', isAdmin ? { teacher: teacher.id, activity: a.id } : { activity: a.id }))}"><h2>${esc(a.title)}</h2><p>${esc(a.description || 'لا يوجد وصف متاح.')}</p><div class="activity-card__footer"><span>عرض التفاصيل ←</span><span>${esc(a.date)}</span></div></a></article>`).join('');
     }
     el('activities-list').onclick = async event => {
