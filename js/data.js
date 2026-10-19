@@ -51,6 +51,15 @@ window.SchoolData = (() => {
     return value;
   }
   return {
+    // Temporary review shortcut: reuse seeded demo identities and the normal session key.
+    async demoLogin(role) {
+      const demoId = role === 'teacher' ? 'noura-mohammed' : role === 'admin' ? 'vice-principal' : null;
+      const user = users().find(u => u.id === demoId && u.active && u.role === role);
+      if (!user) throw new Error('الحساب التجريبي غير متاح أو غير نشط.');
+      if (role === 'teacher') SchoolProfessional.ensureDemoProfile(user.id);
+      sessionStorage.setItem(sessionKey, user.id);
+      return { id: user.id, name: user.name, role: user.role };
+    },
     async login(name, civilRegistration) {
       const loginName = clean(name).toLowerCase();
       const user = users().find(u => u.active && u.civilRegistration === digits(civilRegistration) && (u.name.toLowerCase() === loginName || u.username?.toLowerCase() === loginName));

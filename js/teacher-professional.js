@@ -31,6 +31,17 @@ window.SchoolProfessional = (() => {
     const p = read('teacherProfile')[id];
     return Boolean(p && profileFields.every(f=>String(p[f.key] ?? '').trim()) && stages.includes(p.stage));
   }
+  function ensureDemoProfile(id) {
+    const profiles = read('teacherProfile');
+    if (hasProfile(id)) return;
+    const existing = profiles[id] || {};
+    const defaults = {name:'نورة محمد',civilRegistration:'DEMO-NOURA',employeeNumber:'DEMO-001',specialty:'الرياضيات',stage:'الابتدائية',subjects:'الرياضيات',workload:'18'};
+    const profile = {...existing};
+    profileFields.forEach(f=>{if(!String(profile[f.key] ?? '').trim()) profile[f.key]=defaults[f.key];});
+    if(!stages.includes(profile.stage)) profile.stage=defaults.stage;
+    profiles[id] = {...profile,teacherId:id,updatedAt:new Date().toISOString()};
+    write('teacherProfile',profiles);
+  }
   const esc = value => SchoolApp.escape(value);
   const link = (page,category,extra={}) => SchoolApp.url(`pages/${page}.html`,{type:category.type,...extra});
   function input(f,value='',disabled=false) {
@@ -152,5 +163,5 @@ window.SchoolProfessional = (() => {
     };
   }
   window.addEventListener('storage',event=>{if(['teacherProfile','teacherRecords'].includes(event.key)) location.reload();});
-  return {hasProfile,init};
+  return {hasProfile,ensureDemoProfile,init};
 })();

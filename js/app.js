@@ -55,6 +55,19 @@ window.SchoolApp = (() => {
         case 'teacher-info': case 'teacher-dashboard': case 'teacher-records': case 'teacher-record-form':
           SchoolProfessional.init(user); break;
         case 'login':
+          ['teacher','admin'].forEach(role=>{
+            document.getElementById(`demo-${role}-login`).onclick = async () => {
+              const buttons = ['teacher','admin'].map(r=>document.getElementById(`demo-${r}-login`));
+              buttons.forEach(button=>{button.disabled=true;});
+              try {
+                await SchoolData.demoLogin(role);
+                location.replace(url(role==='teacher'?'pages/teacher-dashboard.html':'pages/admin-dashboard.html'));
+              } catch(error) {
+                status('login-status',error.message);
+                buttons.forEach(button=>{button.disabled=false;});
+              }
+            };
+          });
           document.getElementById('login-form').onsubmit = async event => {
             event.preventDefault();
             try {

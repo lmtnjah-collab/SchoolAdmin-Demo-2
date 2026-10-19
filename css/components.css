@@ -117,6 +117,11 @@
 :focus-visible { outline: 3px solid var(--mint); outline-offset: 4px; }
 button:disabled { opacity: .55; cursor: wait; }
 .login-card { max-width: 500px; margin: 20px auto; }
+.quick-demo-login { margin-top:24px; padding-top:24px; border-top:1px solid var(--border); }
+.quick-demo-login h2 { margin:0; color:var(--primary-dark); font-size:18px; }
+.quick-demo-login p { margin:8px 0 16px; color:var(--text-secondary); font-size:14px; }
+.quick-demo-login__actions { display:flex; flex-wrap:wrap; gap:12px; }
+.quick-demo-login__actions .ui-button { flex:1 1 160px; }
 .demo-note { margin-block: 24px; padding: 16px; border-radius: var(--radius-md); background: var(--primary-soft); color: var(--primary-dark); font-size: 14px; line-height: 1.8; }
 .demo-note summary { cursor: pointer; font-weight: 700; }
 .teachers-toolbar { gap: 16px; justify-content: space-between; align-items: center; }
