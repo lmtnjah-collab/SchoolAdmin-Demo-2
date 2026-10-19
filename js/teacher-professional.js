@@ -6,7 +6,7 @@ window.SchoolProfessional = (() => {
   const date = () => field('date', 'التاريخ', 'date');
   const lesson = () => [date(), field('subject','المادة'), field('grade','الصف'), field('period','الحصة'), field('lesson','موضوع الدرس'), notes(), field('recommendations','التوصيات','textarea',false)];
   const categories = [
-    {type:'peer-visits', key:'peerVisits', title:'الزيارات التبادلية', icon:'↔', fields:[field('visitor','اسم المعلمة الزائرة'),field('host','اسم المعلمة المزارة'),field('subject','المادة'),field('grade','الصف'),date(),field('period','الحصة'),field('lesson','موضوع الدرس'),notes()], columns:['host','subject','date','grade']},
+    {type:'peer-visits', key:'peerVisits', title:'الزيارات التبادلية', icon:'↔', fields:[field('visitor','المعلمات الزائرات لي'),date(),field('period','الحصة'),field('subject','المادة'),field('grade','الصف'),field('attachmentName','إدراج ملف','file',false)], columns:['visitor','subject','date','grade']},
     {type:'workshops', key:'workshops', title:'ورش العمل', icon:'⚒', fields:[field('title','اسم الورشة'),field('topic','موضوع الورشة'),field('place','الجهة / المكان'),date(),field('audience','الفئة المستهدفة'),field('role','دور المعلمة'),notes()], columns:['title','date','place']},
     {type:'principal-visits', key:'principalVisits', title:'زيارات المديرة', icon:'▣', fields:lesson(), columns:['date','subject','grade']},
     {type:'vice-principal-visits', key:'vicePrincipalVisits', title:'زيارات الوكيلة', icon:'✓', fields:lesson(), columns:['date','subject','grade']},
@@ -34,12 +34,15 @@ window.SchoolProfessional = (() => {
   const esc = value => SchoolApp.escape(value);
   const link = (page,category,extra={}) => SchoolApp.url(`pages/${page}.html`,{type:category.type,...extra});
   function input(f,value='',disabled=false) {
+    if(f.type === 'file') {
+      return `<div class="form-field peer-visit-attachment"><label id="peer-attachment-label">${f.label} (اختياري)</label><input id="field-${f.key}" name="${f.key}" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" hidden ${disabled?'disabled':''}><button class="secondary-button peer-visit-upload" id="peer-attachment-choose" type="button" aria-labelledby="peer-attachment-label peer-attachment-action" ${disabled?'hidden':''}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 16V3m-5 5 5-5 5 5M4 15v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/></svg><span id="peer-attachment-action">اختيار ملف</span></button><span id="peer-attachment-name" class="peer-visit-file-name" role="status">${esc(value || 'لم يتم اختيار ملف')}</span><button class="secondary-button" id="peer-attachment-remove" type="button" ${disabled||!value?'hidden':''}>إزالة الملف</button><small>PDF، JPG، JPEG، PNG — يُحفظ اسم الملف فقط في النسخة التجريبية.</small></div>`;
+    }
     const attrs = `id="field-${f.key}" name="${f.key}" ${f.required?'required':''} ${disabled?'disabled':''}`;
     const control = f.type === 'textarea' ? `<textarea ${attrs} maxlength="3000">${esc(value)}</textarea>` : f.type === 'select' ? `<select ${attrs}><option value="">اختاري المرحلة</option>${stages.map(s=>`<option ${s===value?'selected':''}>${s}</option>`).join('')}</select>` : `<input ${attrs} type="${f.type}" value="${esc(value)}" ${f.type==='number'?'min="0" max="60" step="1"':f.type==='text'?'maxlength="200"':''}>`;
     return `<div class="form-field ${f.type==='textarea'?'form-field--full':''}"><label for="field-${f.key}">${f.label}${!f.required?' (اختياري)':''}</label>${control}</div>`;
   }
   function values(form,fields) {
-    const data = Object.fromEntries(fields.map(f=>[f.key,form.elements.namedItem(f.key).value.trim()]));
+    const data = Object.fromEntries(fields.map(f=>[f.key,f.type==='file' ? (form.elements.namedItem(f.key).dataset.fileName || '') : form.elements.namedItem(f.key).value.trim()]));
     if(fields.some(f=>f.required&&!data[f.key])) throw new Error('يرجى إكمال جميع الحقول المطلوبة.');
     return data;
   }
@@ -106,6 +109,33 @@ window.SchoolProfessional = (() => {
     if(id&&!record){root.innerHTML=`<div class="empty-state"><h1>السجل غير موجود</h1><a class="ui-button" href="${esc(back)}">العودة إلى السجلات</a></div>`;return;}
     const view=params.get('mode')==='view';
     root.innerHTML=formMarkup(`${view?'عرض':id?'تعديل':'إضافة سجل'} — ${category.title}`,category.fields,record||{},view,back);
+    if(category.type==='peer-visits') {
+      document.title=`${view?'عرض':id?'تعديل':'إضافة سجل'} - ${category.title} | السجل المهني`;
+      const picker=document.getElementById('field-attachmentName');
+      const choose=document.getElementById('peer-attachment-choose');
+      const remove=document.getElementById('peer-attachment-remove');
+      const updateAttachment=name=>{
+        picker.dataset.fileName=name;
+        document.getElementById('peer-attachment-name').textContent=name||'لم يتم اختيار ملف';
+        document.getElementById('peer-attachment-action').textContent=name?'استبدال الملف':'اختيار ملف';
+        remove.hidden=view||!name;
+      };
+      updateAttachment(record?.attachmentName || '');
+      choose.onclick=()=>picker.click();
+      picker.onchange=()=>{
+        const file=picker.files[0];
+        if(!file) return;
+        if(!/\.(pdf|jpe?g|png)$/i.test(file.name)) {
+          picker.value='';
+          SchoolApp.status('professional-status','يرجى اختيار ملف PDF أو JPG أو JPEG أو PNG.');
+          return;
+        }
+        // Keep only the name; file contents never enter localStorage or a network request.
+        updateAttachment(file.name);
+        SchoolApp.status('professional-status','',false);
+      };
+      remove.onclick=()=>{picker.value='';updateAttachment('');};
+    }
     if(view) return;
     const form=document.getElementById('professional-form');
     form.onsubmit=event=>{

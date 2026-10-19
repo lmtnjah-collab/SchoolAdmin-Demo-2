@@ -148,6 +148,10 @@ dialog h2 { margin: 0; }
 .professional-grid .profile-card__icon { font-size:28px; }
 .professional-table th, .professional-table td { width:auto !important; }
 .professional-table .row-actions { min-width:205px; }
+.peer-visit-attachment { min-width:0; }
+.peer-visit-attachment .peer-visit-upload { display:flex; align-items:center; justify-content:center; gap:10px; min-height:52px; width:100%; border-style:dashed; background:var(--primary-soft); }
+.peer-visit-file-name { overflow-wrap:anywhere; unicode-bidi:plaintext; }
+.peer-visit-attachment small { color:var(--text-secondary); line-height:1.8; }
 @media (max-width:1000px) {
   .professional-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .professional-summary dl { grid-template-columns:repeat(2,minmax(0,1fr)); }
